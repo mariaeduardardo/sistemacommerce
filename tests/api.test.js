@@ -1,0 +1,45 @@
+import {test,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {Readable} from 'node:stream';
+import {randomBytes} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+const dir=mkdtempSync(join(tmpdir(),'cv-api-'));
+process.env.DATABASE_PATH=join(dir,'test.sqlite');
+const {db}=await import('../src/database.js');
+const {hashPassword}=await import('../src/auth.js');
+const {api}=await import('../src/api.js');
+const secret=randomBytes(32).toString('hex');
+const hash=await hashPassword(secret);
+db.prepare('INSERT INTO users(name,email,password,admin) VALUES (?,?,?,1)').run('Admin','admin@example.com',hash);
+let cookie;
+async function request(path,method='GET',body,token=cookie,origin='http://local.test'){
+ const req=Readable.from(body?[JSON.stringify(body)]:[]);req.method=method;req.headers={host:'local.test',origin,'content-type':'application/json',cookie:token};req.socket={remoteAddress:'127.0.0.1'};
+ const result={};const res={writeHead(status,headers){result.status=status;result.headers=headers;},end(value){result.body=JSON.parse(value);}};await api(req,res,'/api'+path);return result;
+}
+test('autenticação, persistência, validação, isolamento de permissões e revogação',async()=>{
+ assert.equal((await request('/clients')).status,401);
+ const login=await request('/login','POST',{email:'admin@example.com',password:secret});assert.equal(login.status,200);cookie=login.headers['Set-Cookie'].split(';')[0];assert.match(login.headers['Set-Cookie'],/HttpOnly/);assert.match(login.headers['Set-Cookie'],/SameSite=Strict/);
+ assert.notEqual(db.prepare('SELECT password FROM users').get().password,secret);
+ assert.equal((await request('/clients','POST',{name:'Teste',company:'Empresa'},cookie,'https://evil.example')).status,403);
+ const created=await request('/clients','POST',{name:'Pessoa',company:'Empresa'});assert.equal(created.status,201);
+ const task=await request('/tasks','POST',{title:'Contato',due:'2026-11-04',owner_id:1,client_id:created.body.id});assert.equal(task.status,201);
+ assert.equal((await request('/tasks','POST',{title:'X',due:'2026-02-30',owner_id:1})).status,400);
+ assert.equal((await request('/tasks/'+task.body.id,'PATCH',{done:true})).status,200);
+ assert.equal((await request('/tasks')).body[0].done,1);
+ const member=await request('/users','POST',{name:'Equipe',email:'team@example.com',password:secret,permissions:{tasks:['read']}});assert.equal(member.status,201);
+ const second=await request('/login','POST',{email:'team@example.com',password:secret});const restricted=second.headers['Set-Cookie'].split(';')[0];
+ assert.equal((await request('/tasks','GET',undefined,restricted)).status,200);
+ assert.equal((await request('/clients','GET',undefined,restricted)).status,403);
+ assert.equal((await request('/users','GET',undefined,restricted)).status,403);
+ assert.equal((await request('/tasks/'+task.body.id,'PATCH',{done:false},restricted)).status,403);
+ assert.equal((await request('/users/'+member.body.id,'PATCH',{permissions:{tasks:['read','edit']}})).status,200);
+ assert.equal((await request('/me','GET',undefined,restricted)).status,401);
+ const check=spawnSync(process.execPath,['--input-type=module','-e',"import {DatabaseSync} from 'node:sqlite';const db=new DatabaseSync(process.env.DATABASE_PATH);if(db.prepare('SELECT COUNT(*) AS n FROM clients').get().n!==1)process.exit(1);"],{env:process.env});assert.equal(check.status,0);
+ assert.ok((await request('/audit')).body.length>=5);
+ assert.equal((await request('/logout','POST',{})).status,200);
+ assert.equal((await request('/me')).status,401);
+});
+after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
