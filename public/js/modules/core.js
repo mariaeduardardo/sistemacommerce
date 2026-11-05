@@ -1,4 +1,4 @@
-export const state={me:null,catalog:{},data:{},team:[],view:'today',scope:'all',query:'',filters:{},archived:false,selected:null,alerts:[]};
+export const state={me:null,catalog:{},data:{},team:[],view:'today',scope:'all',query:'',filters:{},quickFilter:{},archived:false,selected:null,alerts:[],recent:[]};
 export const $=s=>document.querySelector(s);
 export const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const money=n=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format((n||0)/100);

@@ -48,4 +48,9 @@ test('modelos preservados, configuração validada, anexos privados e alertas se
  const task=save(admin,'tasks',{title:'Revisar',owner_id:1,due:today(),status:'Pendente'});const a=alerts(admin);assert.equal(a.filter(x=>x.key==='task:'+task.id).length,1);save(admin,'tasks',{...task,status:'Concluída'},task.id);assert.equal(alerts(admin).filter(x=>x.key==='task:'+task.id).length,0);
  const before=get('clients',client.id);archive(admin,'clients',client.id,{version:before.version,reason:'Arquivamento para teste'});assert.equal(all(admin,'clients').length,0);const archived=get('clients',client.id);archive(admin,'clients',client.id,{version:archived.version,reason:'Restauração para teste'});assert.equal(all(admin,'clients').length,1);assert.equal(reports(admin,'','').sales,2);
 });
+test('atalhos comerciais movem etapa, responsável e follow-up sem edição completa',()=>{
+ const lead=save(admin,'clients',{name:'Atalho',company:'Empresa Atalho'}),generated=list('opportunities').find(item=>item.client_id===lead.id);assert.equal(generated.status,'Novo lead');
+ assert.equal(act('opportunities',generated.id,'stage',{status:'Em contato'}).status,'Em contato');assert.equal(act('opportunities',generated.id,'assign',{owner_id:1}).owner_id,1);
+ assert.equal(act('opportunities',generated.id,'followup',{next_contact:today()}).next_contact,today());assert.equal(act('opportunities',generated.id,'contact',{next_contact:today()}).last_contact,today());assert.equal(list('interactions').filter(item=>item.opportunity_id===generated.id).length,1);
+});
 after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
