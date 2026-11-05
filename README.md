@@ -65,4 +65,4 @@ SQLite com volume persistente atende esta versão de instância única. PostgreS
 - `scripts/`: verificação, cadastro/recuperação da conta e backups.
 - `tests/`: autorização, persistência, ciclo comercial, entrega, garantia, anexos e vínculos.
 
-Os testes usam bancos descartáveis. `/demo.html` preserva o protótipo antigo somente em desenvolvimento; ele usa dados fictícios e não deve ser confundido com a aplicação funcional em `/`.
+Os testes usam bancos descartáveis.

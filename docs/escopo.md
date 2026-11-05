@@ -17,7 +17,7 @@ Next.js/TypeScript, PostgreSQL/Prisma, autenticação com hash e sessões revog�
 
 ## Base funcional implementada
 
-Login, sessões, criação de usuários pela administradora, autorização no servidor, contatos com edição, tarefas com datas reais e auditoria persistente estão disponíveis em `/`. Para esta etapa local foi escolhido SQLite nativo do Node 24, sem dependências externas. PostgreSQL e a arquitetura final continuam pendentes antes da produção. A versão visual em `/demo.html` continua isolada e fictícia. Não confundir a implementação local de contatos/tarefas com a conclusão do escopo total.
+Login, sessões, criação de usuários pela administradora, autorização no servidor, contatos com edição, tarefas com datas reais e auditoria persistente estão disponíveis em `/`. Para esta etapa local foi escolhido SQLite nativo do Node 24, sem dependências externas. PostgreSQL e a arquitetura final continuam pendentes antes da produção. Não confundir a implementação local de contatos/tarefas com a conclusão do escopo total.
 
 ## Implementação integrada
 

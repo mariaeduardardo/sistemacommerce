@@ -7,10 +7,11 @@ const text=(v,max=200)=>{if(typeof v!=='string'||v.length>max)fail(400,'Campo in
 const required=(v,max)=>{v=text(v,max);if(!v)fail(400,'Preencha os campos obrigatórios.');return v;};
 const email=v=>{v=required(v,254).toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))fail(400,'E-mail inválido.');return v;};
 const password=v=>{if(typeof v!=='string'||v.length<12||v.length>128)fail(400,'Use uma senha com 12 a 128 caracteres.');return v;};
+const securityHeaders={'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','X-Robots-Tag':'noindex, nofollow'};
 function requireAccess(u,area,action){if(!allowed(u,area,action))fail(403,'Você não tem permissão para esta ação.');}
 function permissions(input){const output={};if(!input||typeof input!=='object'||Array.isArray(input))fail(400,'Permissões inválidas.');for(const area of areas){const items=input[area]||[];if(!Array.isArray(items)||items.some(a=>!['read','create','edit','archive'].includes(a)))fail(400,'Permissões inválidas.');output[area]=[...new Set(items)];if(items.some(x=>x!=='read')&&!items.includes('read'))fail(400,'Habilite visualizar antes de cadastrar ou editar.');}return output;}
 async function body(req){const chunks=[];let size=0;for await(const chunk of req){const buffer=Buffer.isBuffer(chunk)?chunk:Buffer.from(chunk);size+=buffer.length;if(size>8*1024*1024)fail(413,'Solicitação muito grande.');chunks.push(buffer);}let value;try{value=JSON.parse(Buffer.concat(chunks).toString('utf8')||'{}');}catch{fail(400,'JSON inválido.');}if(!value||typeof value!=='object'||Array.isArray(value))fail(400,'Envie um objeto JSON.');return value;}
-export async function api(req,res,path){const send=(status,data,headers={})=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store',...headers});res.end(JSON.stringify(data));};try{
+export async function api(req,res,path){const send=(status,data,headers={})=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store',...securityHeaders,...headers});res.end(JSON.stringify(data));};try{
  if(req.method!=='GET'){const origin=process.env.APP_ORIGIN||`http://${req.headers.host}`;if(req.headers.origin!==origin)fail(403,'Origem da solicitação inválida.');if(!req.headers['content-type']?.startsWith('application/json'))fail(415,'Envie JSON.');}
  if(path==='/api/login'&&req.method==='POST'){
  const b=await body(req),address=email(b.email),pass=b.password,now=Date.now();
@@ -54,4 +55,4 @@ export async function api(req,res,path){const send=(status,data,headers={})=>{re
  if(/^\/api\/users\/\d+$/.test(path)&&req.method==='PATCH'){const id=Number(path.split('/').pop()),target=db.prepare('SELECT * FROM users WHERE id=?').get(id);if(!target)fail(404,'Usuário não encontrado.');if(target.admin)fail(400,'O acesso administrativo não pode ser alterado por esta tela.');const b=await body(req),perms=permissions(b.permissions);transaction(()=>{db.prepare('UPDATE users SET permissions=? WHERE id=?').run(JSON.stringify(perms),id);db.prepare('DELETE FROM sessions WHERE user_id=?').run(id);audit(user.id,`Permissões do usuário ${id} alteradas; sessões encerradas`);});return send(200,{ok:true});}
  }
  fail(404,'Operação não encontrada.');
- }catch(e){if(!e.status)console.error('Falha interna na API:',e.code||e.name);send(e.status||500,{error:e.status?e.message:'Não foi possível concluir a operação.'});}}
+ }catch(e){send(e.status||500,{error:e.status?e.message:'Não foi possível concluir a operação.'});}}
