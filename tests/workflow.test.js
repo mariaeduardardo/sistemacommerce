@@ -15,7 +15,7 @@ const rejects=(fn,status)=>assert.throws(fn,e=>e.status===status);
 function opportunity(method='Pix'){return save(admin,'opportunities',{client_id:client.id,title:'Projeto de teste',service:'Site institucional',status:'Fechado',potential:10001,value:10001,payment_method:method,owner_id:1});}
 function act(kind,id,verb,data={}){return action(admin,kind,id,verb,{version:get(kind,id).version,...data});}
 test('fluxo real: contrato, 50%, aprovação, saldo, checklist, entrega e garantia',()=>{
- client=save(admin,'clients',{name:'Pessoa',company:'Empresa'});
+ client=save(admin,'clients',{name:'Pessoa',company:'Empresa'});assert.equal(list('opportunities').filter(item=>item.client_id===client.id&&item.status==='Novo lead').length,1);assert.equal(list('tasks').filter(item=>item.client_id===client.id&&item.title==='Primeiro contato: Empresa').length,1);
  opp=opportunity();rejects(()=>act('opportunities',opp.id,'project'),400);
  act('opportunities',opp.id,'contract');rejects(()=>act('opportunities',opp.id,'payment',{amount:5000}),400);
  act('opportunities',opp.id,'payment',{amount:5001});opp=act('opportunities',opp.id,'project');project=get('projects',opp.project_id);assert.match(project.code,/^CV-\d{4}-0001$/);
