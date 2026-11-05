@@ -6,7 +6,7 @@ import {join} from 'node:path';
 const dir=mkdtempSync(join(tmpdir(),'cv-workflow-'));process.env.DATABASE_PATH=join(dir,'test.sqlite');
 const {db}=await import('../src/database.js');
 const {save,action,archive,all,saveSettings}=await import('../src/domain/service.js');
-const {get,list,settings,today}=await import('../src/domain/storage.js');
+const {get,list,settings,today,searchWork}=await import('../src/domain/storage.js');
 const {alerts,finance,reports}=await import('../src/domain/queries.js');
 db.prepare('INSERT INTO users(name,email,password,admin) VALUES (?,?,?,1)').run('Admin','admin@example.com','test-only');
 const admin={id:1,admin:1,permissions:'{}'},member={id:1,admin:0,permissions:JSON.stringify({projects:['read','edit']})};
@@ -53,4 +53,5 @@ test('atalhos comerciais movem etapa, responsável e follow-up sem edição comp
  assert.equal(act('opportunities',generated.id,'stage',{status:'Em contato'}).status,'Em contato');assert.equal(act('opportunities',generated.id,'assign',{owner_id:1}).owner_id,1);
  assert.equal(act('opportunities',generated.id,'followup',{next_contact:today()}).next_contact,today());assert.equal(act('opportunities',generated.id,'contact',{next_contact:today()}).last_contact,today());assert.equal(list('interactions').filter(item=>item.opportunity_id===generated.id).length,1);
 });
+test('busca não mantém cliente arquivado',()=>{const found=save(admin,'clients',{name:'Busca',company:'Cliente exclusivo de busca'});assert.ok(searchWork('exclusivo').some(row=>row.id===found.id));archive(admin,'clients',found.id,{version:found.version,reason:'Teste de índice'});assert.equal(searchWork('exclusivo').some(row=>row.id===found.id),false);});
 after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});

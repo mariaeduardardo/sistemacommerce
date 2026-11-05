@@ -16,8 +16,8 @@ const hash=await hashPassword(secret);
 db.prepare('INSERT INTO users(name,email,password,admin) VALUES (?,?,?,1)').run('Admin','admin@example.com',hash);
 let cookie;
 async function request(path,method='GET',body,token=cookie,origin='http://local.test',forwarded){
- const req=Readable.from(body?[JSON.stringify(body)]:[]);req.method=method;req.headers={host:'local.test',origin,'content-type':'application/json',cookie:token,...(forwarded?{'x-forwarded-for':forwarded}:{})};req.socket={remoteAddress:'127.0.0.1'};
- const result={};const res={writeHead(status,headers){result.status=status;result.headers=headers;},end(value){result.body=Buffer.isBuffer(value)?value:JSON.parse(value);}};await api(req,res,'/api'+path);return result;
+ const req=Readable.from(body?[JSON.stringify(body)]:[]);req.method=method;req.url='/api'+path;req.headers={host:'local.test',origin,'content-type':'application/json',cookie:token,...(forwarded?{'x-forwarded-for':forwarded}:{})};req.socket={remoteAddress:'127.0.0.1'};
+ const result={};const res={writeHead(status,headers){result.status=status;result.headers=headers;},end(value){result.body=Buffer.isBuffer(value)?value:JSON.parse(value);}};await api(req,res,'/api'+path.split('?')[0]);return result;
 }
 test('autenticação, persistência, validação, isolamento de permissões e revogação',async()=>{
  assert.equal((await request('/work/clients')).status,401);
@@ -39,6 +39,7 @@ test('autenticação, persistência, validação, isolamento de permissões e re
  assert.equal((await request('/me','GET',undefined,restricted)).status,401);
  const check=spawnSync(process.execPath,['--input-type=module','-e',"import {DatabaseSync} from 'node:sqlite';const db=new DatabaseSync(process.env.DATABASE_PATH);if(db.prepare('SELECT COUNT(*) AS n FROM clients').get().n!==1)process.exit(1);"],{env:process.env});assert.equal(check.status,0);
  assert.ok((await request('/audit')).body.length>=5);
+ const detailedAudit=await request('/work/audit?limit=1');assert.equal(detailedAudit.status,200);assert.ok(Array.isArray(detailedAudit.body.items));assert.ok(detailedAudit.body.items.length<=1);
  const snapshot=await request('/work/backup');assert.equal(snapshot.status,200);assert.ok(Buffer.isBuffer(snapshot.body));assert.ok(snapshot.body.length>0);
  assert.equal((await request('/logout','POST',{})).status,200);
  assert.equal((await request('/me')).status,401);
