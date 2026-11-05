@@ -44,7 +44,7 @@ Alterações concorrentes são rejeitadas por versão do registro. Mudança de m
 
 Hash scrypt com salt individual, sessão aleatória com somente hash no banco, cookies HttpOnly/SameSite=Strict, validade de oito horas, logout e revogação de sessões ao mudar senha/permissões. Origem validada nas mutações; limite de corpo, entradas e tentativas de login; statements parametrizados; autorização no servidor; anexos privados servidos como download com nosniff. CPF/CNPJ e demais dados de negócio ficam no banco, que requer disco e backups protegidos pelo provedor.
 
-Produção exige `NODE_ENV=production` e `APP_ORIGIN` HTTPS; o inicializador também reconhece `RENDER_EXTERNAL_URL`. Cookies são Secure em produção. A demonstração antiga é bloqueada em produção. A versão atual tem recuperação de senha pelo operador da hospedagem; recuperação por e-mail e MFA de login ainda não estão implementados. Os registros de 2FA dos projetos não são MFA do próprio sistema.
+Produção exige `NODE_ENV=production` e `APP_ORIGIN` HTTPS; o inicializador também reconhece `RENDER_EXTERNAL_URL`. Cookies são Secure em produção. A versão atual tem recuperação de senha pelo operador da hospedagem; recuperação por e-mail e MFA de login ainda não estão implementados. Os registros de 2FA dos projetos não são MFA do próprio sistema.
 
 ## Publicação e backups
 
@@ -52,7 +52,7 @@ Ver [docs/publicacao.md](docs/publicacao.md). Dockerfile, Compose e Blueprint Re
 
 SQLite com volume persistente atende esta versão de instância única. PostgreSQL/Prisma e Next.js da proposta inicial não foram adotados nesta implementação; o sistema usa Node.js nativo e módulos JavaScript com validação explícita. Escalar horizontalmente exige evolução do banco e da arquitetura.
 
-`npm run backup` cria cópia consistente com anexos; `npm run restore:check -- arquivo.sqlite` verifica restauração em área temporária. Agendamento diário opcional via `BACKUP_ENABLED=true`, retenção padrão de sete cópias. Cópia externa criptografada e monitoramento do provedor ainda precisam ser configurados antes de dados reais.
+`npm run backup` cria cópia consistente com anexos; `npm run restore:check -- arquivo.sqlite` verifica restauração em área temporária. Agendamento diário opcional via `BACKUP_ENABLED=true`, retenção padrão de sete cópias. A administradora também pode baixar uma cópia consistente autenticada em `/api/work/backup` para guardar fora do volume da hospedagem. Faça a cópia externa criptografada e teste a restauração antes de dados reais.
 
 ## Organização
 

@@ -13,7 +13,7 @@
 
 ## Implementação posterior ao protótipo
 
-Next.js/TypeScript, PostgreSQL/Prisma, autenticação com hash e sessões revogáveis, permissões no servidor, uploads privados, auditoria persistente e rotinas de alertas. Implementar CRM e projetos, checklists versionados por serviço, aprovações, LGPD/acessos/incidentes, garantias, manutenção, suporte, indicadores e busca. Validar concorrência dos IDs CV-ANO-NÚMERO, gates de entrega e isolamento das permissões. Preparar HTTPS, backups e restauração antes de produção.
+Manter a arquitetura Node.js nativo + SQLite persistente, com autenticação por hash e sessões revogáveis, permissões no servidor, uploads privados, auditoria persistente e rotinas de alertas. Evoluir para PostgreSQL apenas se houver necessidade de múltiplas instâncias. Manter CRM e projetos, checklists versionados por serviço, aprovações, LGPD/acessos/incidentes, garantias, manutenção, suporte, indicadores e busca. Preparar HTTPS, backup externo e restauração antes de produção.
 
 ## Base funcional implementada
 

@@ -15,31 +15,44 @@ const secret=randomBytes(32).toString('hex');
 const hash=await hashPassword(secret);
 db.prepare('INSERT INTO users(name,email,password,admin) VALUES (?,?,?,1)').run('Admin','admin@example.com',hash);
 let cookie;
-async function request(path,method='GET',body,token=cookie,origin='http://local.test'){
- const req=Readable.from(body?[JSON.stringify(body)]:[]);req.method=method;req.headers={host:'local.test',origin,'content-type':'application/json',cookie:token};req.socket={remoteAddress:'127.0.0.1'};
- const result={};const res={writeHead(status,headers){result.status=status;result.headers=headers;},end(value){result.body=JSON.parse(value);}};await api(req,res,'/api'+path);return result;
+async function request(path,method='GET',body,token=cookie,origin='http://local.test',forwarded){
+ const req=Readable.from(body?[JSON.stringify(body)]:[]);req.method=method;req.headers={host:'local.test',origin,'content-type':'application/json',cookie:token,...(forwarded?{'x-forwarded-for':forwarded}:{})};req.socket={remoteAddress:'127.0.0.1'};
+ const result={};const res={writeHead(status,headers){result.status=status;result.headers=headers;},end(value){result.body=Buffer.isBuffer(value)?value:JSON.parse(value);}};await api(req,res,'/api'+path);return result;
 }
 test('autenticação, persistência, validação, isolamento de permissões e revogação',async()=>{
- assert.equal((await request('/clients')).status,401);
+ assert.equal((await request('/work/clients')).status,401);
  const login=await request('/login','POST',{email:'admin@example.com',password:secret});assert.equal(login.status,200);cookie=login.headers['Set-Cookie'].split(';')[0];assert.match(login.headers['Set-Cookie'],/HttpOnly/);assert.match(login.headers['Set-Cookie'],/SameSite=Strict/);
  assert.notEqual(db.prepare('SELECT password FROM users').get().password,secret);
- assert.equal((await request('/clients','POST',{name:'Teste',company:'Empresa'},cookie,'https://evil.example')).status,403);
- const created=await request('/clients','POST',{name:'Pessoa',company:'Empresa'});assert.equal(created.status,201);
- const task=await request('/tasks','POST',{title:'Contato',due:'2026-11-04',owner_id:1,client_id:created.body.id});assert.equal(task.status,201);
- assert.equal((await request('/tasks','POST',{title:'X',due:'2026-02-30',owner_id:1})).status,400);
- assert.equal((await request('/tasks/'+task.body.id,'PATCH',{done:true})).status,200);
- assert.equal((await request('/tasks')).body[0].done,1);
+ assert.equal((await request('/work/clients','POST',{name:'Teste',company:'Empresa'},cookie,'https://evil.example')).status,403);
+ const created=await request('/work/clients','POST',{name:'Pessoa',company:'Empresa'});assert.equal(created.status,201);
+ const task=await request('/work/tasks','POST',{title:'Contato',due:'2026-11-04',owner_id:1,client_id:created.body.id,status:'Pendente'});assert.equal(task.status,201);
+ assert.equal((await request('/work/tasks','POST',{title:'X',due:'2026-02-30',owner_id:1,status:'Pendente'})).status,400);
+ const completed=await request('/work/tasks/'+task.body.id,'PATCH',{...task.body,status:'Concluída',version:task.body.version});assert.equal(completed.status,200);
+ assert.equal((await request('/work/tasks')).body[0].status,'Concluída');
  const member=await request('/users','POST',{name:'Equipe',email:'team@example.com',password:secret,permissions:{tasks:['read']}});assert.equal(member.status,201);
  const second=await request('/login','POST',{email:'team@example.com',password:secret});const restricted=second.headers['Set-Cookie'].split(';')[0];
- assert.equal((await request('/tasks','GET',undefined,restricted)).status,200);
- assert.equal((await request('/clients','GET',undefined,restricted)).status,403);
+ assert.equal((await request('/work/tasks','GET',undefined,restricted)).status,200);
+ assert.equal((await request('/work/clients','GET',undefined,restricted)).status,403);
  assert.equal((await request('/users','GET',undefined,restricted)).status,403);
- assert.equal((await request('/tasks/'+task.body.id,'PATCH',{done:false},restricted)).status,403);
+ assert.equal((await request('/work/tasks/'+task.body.id,'PATCH',{...task.body,status:'Pendente',version:task.body.version},restricted)).status,403);
  assert.equal((await request('/users/'+member.body.id,'PATCH',{permissions:{tasks:['read','edit']}})).status,200);
  assert.equal((await request('/me','GET',undefined,restricted)).status,401);
  const check=spawnSync(process.execPath,['--input-type=module','-e',"import {DatabaseSync} from 'node:sqlite';const db=new DatabaseSync(process.env.DATABASE_PATH);if(db.prepare('SELECT COUNT(*) AS n FROM clients').get().n!==1)process.exit(1);"],{env:process.env});assert.equal(check.status,0);
  assert.ok((await request('/audit')).body.length>=5);
+ const snapshot=await request('/work/backup');assert.equal(snapshot.status,200);assert.ok(Buffer.isBuffer(snapshot.body));assert.ok(snapshot.body.length>0);
  assert.equal((await request('/logout','POST',{})).status,200);
  assert.equal((await request('/me')).status,401);
+});
+test('oportunidades sem permissão financeira são sanitizadas e limite usa IP encaminhado',async()=>{
+ const adminCookie=(await request('/login','POST',{email:'admin@example.com',password:secret})).headers['Set-Cookie'].split(';')[0];
+ const client=(await request('/work/clients','POST',{name:'Financeiro',company:'Empresa financeira'},adminCookie)).body;
+ const opportunity=(await request('/work/opportunities','POST',{client_id:client.id,title:'Proposta confidencial',service:'Site institucional',status:'Em contato',owner_id:1,potential:99900,value:88800,payment_method:'Pix'},adminCookie)).body;
+ const member=(await request('/users','POST',{name:'Comercial',email:'commercial@example.com',password:secret,permissions:{commercial:['read']}},adminCookie)).body;
+ const commercialCookie=(await request('/login','POST',{email:'commercial@example.com',password:secret},'', 'http://local.test','203.0.113.10')).headers['Set-Cookie'].split(';')[0];
+ const hidden=(await request('/work/opportunities/'+opportunity.id,'GET',undefined,commercialCookie)).body;for(const key of ['value','potential','payment_method','contract_confirmed','contract_at','received','balance','installments'])assert.equal(Object.hasOwn(hidden,key),false);
+ for(let i=0;i<10;i++)assert.equal((await request('/login','POST',{email:'admin@example.com',password:'senha-errada'},'','http://local.test','198.51.100.10')).status,401);
+ assert.equal((await request('/login','POST',{email:'admin@example.com',password:secret},'','http://local.test','198.51.100.10')).status,429);
+ assert.equal((await request('/login','POST',{email:'admin@example.com',password:secret},'','http://local.test','198.51.100.11')).status,200);
+ assert.ok(member.id);
 });
 after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});

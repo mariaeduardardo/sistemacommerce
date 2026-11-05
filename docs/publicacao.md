@@ -29,7 +29,7 @@ O bootstrap não substitui contas já existentes. Sem as variáveis e sem uma ad
 
 Com `BACKUP_ENABLED=true`, o processo de produção cria um backup após um minuto e a cada 24 horas enquanto estiver rodando. Falhas são registradas em stderr. Configure monitoramento desses logs no provedor.
 
-Backups no mesmo disco protegem contra erros de dados, mas não contra perda do volume. Antes de dados reais, configurar cópia externa criptografada/snapshot do disco no provedor, retenção e teste periódico. O sistema não tem acesso a uma conta externa de armazenamento nesta sessão.
+Backups no mesmo disco protegem contra erros de dados, mas não contra perda do volume. A administradora autenticada pode baixar uma cópia consistente em `/api/work/backup`; guarde-a em local externo criptografado. Antes de dados reais, configurar cópia externa criptografada ou snapshot do disco no provedor, retenção e teste periódico. O sistema não envia cópias automaticamente para contas externas.
 
 Verificar um backup sem alterar dados ativos:
 
