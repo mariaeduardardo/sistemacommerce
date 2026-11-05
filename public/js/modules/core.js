@@ -12,7 +12,7 @@ export function toast(message){$('#toast').textContent=message;$('#toast').class
 export function dialog(html){const el=$('#modal');$('#dialog-body').innerHTML=html;if(!el.open)el.showModal();}
 export function closeDialog(){$('#modal').close();$('#dialog-body').replaceChildren();}
 export function error(e){const box=$('#modal[open] .error')||$('#login .error');if(box)box.textContent=e.message;else toast(e.message);}
-export function heading(title,subtitle,button=''){return `<section class="page-heading"><div><p class="eyebrow">COMMERCE VISUAL / OPERAÇÃO</p><h1>${esc(title)}</h1><p class="subheading">${esc(subtitle)}</p></div>${button}</section>`;}
+export function heading(title,subtitle,button=''){return `<section class="page-heading"><div><p class="eyebrow">CRM COMMERCE / OPERAÇÃO</p><h1>${esc(title)}</h1><p class="subheading">${esc(subtitle)}</p></div>${button}</section>`;}
 export const recordLabel=r=>r?.code?`${r.code} · ${r.title}`:r?.company||r?.title||r?.name||r?.description?.slice(0,80)||`Registro #${r?.id}`;
 export function referenceLabel(target,id){if(!id)return '—';const list=target==='team'?state.team:state.data[target]||[];const item=list.find(r=>r.id===id);return item?recordLabel(item):`#${id}`;}
 export const badge=s=>`<span class="badge ${['Perdido','Urgente','Atrasado'].includes(s)?'orange':'blue-bg'}">${esc(s||'Pendente')}</span>`;
