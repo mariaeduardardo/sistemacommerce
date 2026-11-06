@@ -57,6 +57,7 @@ test('áudio enviado transforma o lead em acompanhamento e cria retornos',()=>{
  const lead=save(admin,'clients',{name:'Áudio',company:'Empresa do áudio'}),generated=list('opportunities').find(item=>item.client_id===lead.id),saved=act('opportunities',generated.id,'approach');
  assert.equal(saved.status,'Em contato');assert.equal(saved.approach_status,'Áudio enviado');assert.equal(saved.last_contact,today());
  assert.equal(list('tasks').filter(item=>item.client_id===lead.id&&/^Follow-up [237]d:/.test(item.title)).length,3);
+ assert.equal(act('opportunities',saved.id,'contact',{next_contact:today()}).approach_status,'');
 });
 test('busca não mantém cliente arquivado',()=>{const found=save(admin,'clients',{name:'Busca',company:'Cliente exclusivo de busca'});assert.ok(searchWork('exclusivo').some(row=>row.id===found.id));archive(admin,'clients',found.id,{version:found.version,reason:'Teste de índice'});assert.equal(searchWork('exclusivo').some(row=>row.id===found.id),false);});
 after(()=>{db.close();rmSync(dir,{recursive:true,force:true});});
