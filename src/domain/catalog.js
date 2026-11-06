@@ -2,7 +2,7 @@ const f=(name,label,type='text',extra={})=>({name,label,type,...extra});
 const required={required:true};
 const ref=(name,label,target,extra={})=>f(name,label,'ref',{target,...extra});
 export const services=['Site institucional','Landing page','Loja virtual','Sistema personalizado','Segurança digital','LGPD'];
-export const origins=['Instagram','WhatsApp','Indicação','Google','Site','Cliente antigo','Prospecção','Outro'];
+export const origins=['Instagram','WhatsApp','Indicação','Google','Google Maps','Site','Cliente antigo','Prospecção','Outro'];
 export const stages=['Novo lead','Em contato','Briefing enviado','Briefing recebido','Proposta enviada','Aguardando resposta','Negociação','Fechado','Contrato pendente','Pagamento pendente','Perdido'];
 export const projectStages=['Em andamento','Aguardando materiais','Aguardando cliente','Aguardando aprovação','Em testes','Pronto para entrega','Entregue','Em garantia','Manutenção ativa','Concluído'];
 const status=(options)=>f('status','Status','select',{options,required:true});

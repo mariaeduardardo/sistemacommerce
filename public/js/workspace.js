@@ -1,5 +1,5 @@
 import {state,$,esc,api,can,dialog,closeDialog,error,toast,refreshData,heading,today} from './modules/core.js';
-import {resourcePage,editForm,parseForm,openRecord,actionForm,checkForm} from './modules/resources.js';
+import {resourcePage,editForm,quickLeadForm,parseForm,openRecord,actionForm,checkForm} from './modules/resources.js';
 import {home,warranties,financePage,reportsPage,reportRange,auditPage,calendarPage} from './modules/pages.js';
 import {usersPage,userForm,parsePermissions,settingsPage,templateRow,passwordForm} from './modules/settings.js';
 const brand='<div class="brand"><img src="/assets/crmcommerce-logo.png" alt="CRM COMMERCE"></div>';
@@ -25,7 +25,7 @@ async function optimisticOpportunity(id,payload){const rows=state.data.opportuni
 async function quickOpportunity(id,quick){const stages=state.catalog.opportunities?.fields.find(field=>field.name==='status')?.options||[],row=(state.data.opportunities||[]).find(item=>item.id===id);if(!row)throw Error('Oportunidade não encontrada.');if(quick==='contact')return optimisticOpportunity(id,{verb:'contact',next_contact:plusDays(3)});if(quick==='followup-3')return optimisticOpportunity(id,{verb:'followup',next_contact:plusDays(3)});if(quick==='followup-7')return optimisticOpportunity(id,{verb:'followup',next_contact:plusDays(7)});if(quick==='next'){const position=stages.indexOf(row.status);if(position<0||!stages[position+1])return toast('Esta oportunidade já está na última etapa.');return optimisticOpportunity(id,{verb:'stage',status:stages[position+1]});}}
 document.addEventListener('click',async event=>{const b=event.target.closest('button');if(!b)return;try{
  if(b.id==='close')return closeDialog();if(b.id==='logout'||b.id==='mobile-logout'){await api('/logout','POST',{});return login();}if(b.dataset.focusLogin){$('#login input')?.focus();return;}if(b.id==='password')return passwordForm();if(b.id==='notifications')return notifications();if(b.dataset.view)return await navigate(b.dataset.view);if(b.id==='refresh')return await refresh(true);if(b.id==='global-search')return commandPalette();if(b.dataset.command!==undefined)return runCommand(+b.dataset.command);
- if(b.dataset.new)return editForm(b.dataset.new);
+ if(b.dataset.new)return b.dataset.new==='clients'?quickLeadForm():editForm(b.dataset.new);
  if(b.dataset.open){remember(b.dataset.open,+b.dataset.id,recordLabelFor(b.dataset.open,+b.dataset.id));return await openRecord(b.dataset.open,+b.dataset.id);}
  if(b.dataset.quickFilter){state.quickFilter[b.dataset.quickFilter]=b.dataset.filterValue;return render();}
  if(b.dataset.oppStage)return optimisticOpportunity(+b.dataset.oppStage,{verb:'stage',status:b.dataset.stage});
@@ -44,6 +44,7 @@ document.addEventListener('click',async event=>{const b=event.target.closest('bu
 document.addEventListener('submit',async event=>{event.preventDefault();const form=event.target,values=Object.fromEntries(new FormData(form)),button=form.querySelector('button.primary');if(button)button.disabled=true;try{
  if(form.id==='login'){await api('/login','POST',values);state.me=await api('/me');state.view='today';await refresh();return;}
  if(form.id==='password-form'){await api('/change-password','POST',values);login();toast('Senha alterada. Entre novamente.');return;}
+ if(form.id==='quick-lead-form'){await api('/work/clients','POST',{name:values.company,company:values.company,phone:values.phone,origin:values.origin,notes:values.notes,service:''});}
  if(form.id==='resource-form'){const kind=form.dataset.kind,old=state.selected.record,data=await parseForm(form,kind);await api('/work/'+kind+(old.id?'/'+old.id:''),old.id?'PATCH':'POST',data);}
  if(form.id==='action-form'){const data={...values,version:state.selected.record.version};if(data.amount)data.amount=+data.amount;await api(`/work/${form.dataset.kind}/${form.dataset.id}/${form.dataset.verb}`,'POST',data);}
  if(form.id==='check-form'){const p=state.selected.record;await api(`/work/projects/${p.id}/check`,'POST',{version:p.version,item_id:form.dataset.item,state:values.state,note:values.note,evidence:values.evidence,owner_id:values.owner_id?+values.owner_id:null});closeDialog();await refresh(true);await openRecord('projects',p.id);return;}
