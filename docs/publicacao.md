@@ -12,10 +12,10 @@ O arquivo `render.yaml` descreve um Web Service Docker com disco persistente. O 
 
 1. Na conta Render, conectar este repositório GitHub e criar um Blueprint a partir de `render.yaml` (ou Web Service Docker equivalente).
 2. Preencher `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` no formulário seguro do provedor. Senha de 12 a 128 caracteres, sem compartilhá-la pelo chat.
-3. O serviço usa o endereço HTTPS temporário fornecido pela Render (`RENDER_EXTERNAL_URL`) como origem. Não é necessário configurar o domínio da Hostinger.
+3. Para usar somente o endereço temporário, a origem é preenchida automaticamente com `RENDER_EXTERNAL_URL`. Para o domínio próprio, configurar `APP_ORIGINS` no Render com as origens separadas por vírgula: `https://crm.commercevisual.com,https://commerce-visual.onrender.com`. Fazer isso antes de testar login, cadastro ou qualquer salvamento pelo domínio próprio.
 4. Confirmar disco persistente montado em `/var/data`, instância única e variável `DATABASE_PATH=/var/data/commerce.sqlite`.
 5. Após o deploy, abrir o endereço mostrado pelo provedor, entrar com a administradora e criar o segundo usuário. Remover as três variáveis de bootstrap após validar o acesso; a conta já estará persistida.
-6. Conferir login/logout, permissões do segundo usuário, cadastro persistente após reinício do serviço, anexos e backup/restauração.
+6. Conferir login/logout, permissões do segundo usuário, cadastro persistente após reinício do serviço, anexos e backup/restauração. Depois da primeira entrada bem-sucedida, alterar a senha da administradora caso ela tenha sido exibida em qualquer captura e remover `ADMIN_NAME`, `ADMIN_EMAIL` e `ADMIN_PASSWORD` do ambiente.
 
 O bootstrap não substitui contas já existentes. Sem as variáveis e sem uma administradora cadastrada, o serviço pode iniciar, mas ninguém consegue entrar.
 
@@ -30,6 +30,8 @@ O bootstrap não substitui contas já existentes. Sem as variáveis e sem uma ad
 Com `BACKUP_ENABLED=true`, o processo de produção cria um backup após um minuto e a cada 24 horas enquanto estiver rodando. Falhas são registradas em stderr. Configure monitoramento desses logs no provedor.
 
 Backups no mesmo disco protegem contra erros de dados, mas não contra perda do volume. A administradora autenticada pode baixar uma cópia consistente em `/api/work/backup`; guarde-a em local externo criptografado. Antes de dados reais, configurar cópia externa criptografada ou snapshot do disco no provedor, retenção e teste periódico. O sistema não envia cópias automaticamente para contas externas.
+
+Rotina mínima recomendada: baixar uma cópia mensal após o fechamento financeiro, armazená-la fora do Render e executar `npm run restore:check -- arquivo.sqlite` em uma máquina segura. O teste automatizado do projeto também cria, valida e restaura uma cópia descartável a cada execução.
 
 Verificar um backup sem alterar dados ativos:
 

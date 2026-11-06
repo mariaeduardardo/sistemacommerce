@@ -8,6 +8,8 @@ import {randomBytes} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 const dir=mkdtempSync(join(tmpdir(),'cv-api-'));
 process.env.DATABASE_PATH=join(dir,'test.sqlite');
+process.env.TRUST_PROXY='true';
+process.env.APP_ORIGINS='http://local.test,https://crm.example.test';
 const {db}=await import('../src/database.js');
 const {hashPassword}=await import('../src/auth.js');
 const {api}=await import('../src/api.js');
@@ -25,6 +27,7 @@ test('autenticação, persistência, validação, isolamento de permissões e re
  assert.notEqual(db.prepare('SELECT password FROM users').get().password,secret);
  assert.equal((await request('/work/clients','POST',{name:'Teste',company:'Empresa'},cookie,'https://evil.example')).status,403);
  const created=await request('/work/clients','POST',{name:'Pessoa',company:'Empresa'});assert.equal(created.status,201);
+ assert.equal((await request('/work/clients','POST',{name:'Domínio',company:'Empresa do domínio'},cookie,'https://crm.example.test')).status,201);
  const task=await request('/work/tasks','POST',{title:'Contato',due:'2026-11-04',owner_id:1,client_id:created.body.id,status:'Pendente'});assert.equal(task.status,201);
  assert.equal((await request('/work/tasks','POST',{title:'X',due:'2026-02-30',owner_id:1,status:'Pendente'})).status,400);
  const completed=await request('/work/tasks/'+task.body.id,'PATCH',{...task.body,status:'Concluída',version:task.body.version});assert.equal(completed.status,200);
@@ -37,7 +40,7 @@ test('autenticação, persistência, validação, isolamento de permissões e re
  assert.equal((await request('/work/tasks/'+task.body.id,'PATCH',{...task.body,status:'Pendente',version:task.body.version},restricted)).status,403);
  assert.equal((await request('/users/'+member.body.id,'PATCH',{permissions:{tasks:['read','edit']}})).status,200);
  assert.equal((await request('/me','GET',undefined,restricted)).status,401);
- const check=spawnSync(process.execPath,['--input-type=module','-e',"import {DatabaseSync} from 'node:sqlite';const db=new DatabaseSync(process.env.DATABASE_PATH);if(db.prepare('SELECT COUNT(*) AS n FROM clients').get().n!==1)process.exit(1);"],{env:process.env});assert.equal(check.status,0);
+ const check=spawnSync(process.execPath,['--input-type=module','-e',"import {DatabaseSync} from 'node:sqlite';const db=new DatabaseSync(process.env.DATABASE_PATH);if(db.prepare('SELECT COUNT(*) AS n FROM clients').get().n!==2)process.exit(1);"],{env:process.env});assert.equal(check.status,0);
  assert.ok((await request('/audit')).body.length>=5);
  const detailedAudit=await request('/work/audit?limit=1');assert.equal(detailedAudit.status,200);assert.ok(Array.isArray(detailedAudit.body.items));assert.ok(detailedAudit.body.items.length<=1);
  const snapshot=await request('/work/backup');assert.equal(snapshot.status,200);assert.ok(Buffer.isBuffer(snapshot.body));assert.ok(snapshot.body.length>0);

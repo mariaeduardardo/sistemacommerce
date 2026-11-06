@@ -16,6 +16,10 @@ services:
         value: 3000
       - key: DATABASE_PATH
         value: /var/data/commerce.sqlite
+      - key: APP_ORIGINS
+        sync: false
+      - key: TRUST_PROXY
+        value: true
       - key: BACKUP_ENABLED
         value: true
       - key: BACKUP_RETENTION

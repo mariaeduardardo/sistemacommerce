@@ -2,10 +2,11 @@ import {api} from './src/api.js';
 import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
-if(process.env.NODE_ENV==='production'&&!/^https:\/\//.test(process.env.APP_ORIGIN||''))throw Error('Configure APP_ORIGIN com HTTPS antes de executar em produção.');
+const configuredOrigins=process.env.APP_ORIGINS||process.env.APP_ORIGIN||'';
+if(process.env.NODE_ENV==='production'&&!configuredOrigins.split(',').every(origin=>/^https:\/\//.test(origin.trim())))throw Error('Configure APP_ORIGINS com origens HTTPS antes de executar em produção.');
 const root = resolve('public');
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml' };
-const securityHeaders={'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','X-Robots-Tag':'noindex, nofollow'};
+const securityHeaders={'X-Content-Type-Options':'nosniff','X-Frame-Options':'DENY','Referrer-Policy':'same-origin','Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=(), usb=()','Cross-Origin-Opener-Policy':'same-origin','Cross-Origin-Resource-Policy':'same-origin','X-Robots-Tag':'noindex, nofollow',...(process.env.NODE_ENV==='production'?{'Strict-Transport-Security':'max-age=31536000; includeSubDomains'}:{})};
 const server=http.createServer(async (req, res) => {
   try {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
