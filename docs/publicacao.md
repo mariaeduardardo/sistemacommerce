@@ -41,7 +41,7 @@ npm run restore:check -- /caminho/do/backup.sqlite
 
 Para restaurar de verdade: parar a aplicação, preservar o banco atual e seus arquivos WAL/SHM, restaurar uma cópia validada no caminho de `DATABASE_PATH` com permissões restritas e reiniciar. Não sobrescrever um banco em uso. Solicitar apoio técnico para esse procedimento.
 
-Se necessário, `scripts/reset-password.js` recupera uma conta a partir de `RESET_EMAIL` e `RESET_PASSWORD` definidos com segurança no console da hospedagem, revoga sessões e registra a operação. Não há recuperação automática por e-mail nem MFA de login nesta versão.
+Se necessário, defina temporariamente `RESET_EMAIL` e `RESET_PASSWORD` no Environment do Render e faça um deploy. O início do serviço executa a recuperação uma única vez naquele processo, revoga sessões e registra a operação. Remova as duas variáveis assim que o deploy concluir, para que uma publicação futura não reaplique a mesma senha. Também é possível executar `scripts/reset-password.js` diretamente pelo Shell. Não há recuperação automática por e-mail nem MFA de login nesta versão.
 
 ## Limites da publicação nesta sessão
 
